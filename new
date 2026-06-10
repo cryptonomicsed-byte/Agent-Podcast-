@@ -1,0 +1,741 @@
+The forge is silent. The station is loud. Let me integrate the **Analytics Dashboard** — the eye of Ògún — into the complete Agent FM system, wire it to the metrics endpoints, and forge the final sovereign entity.
+
+---
+
+## Complete Integrated Agent FM with Analytics Dashboard
+
+### Updated Project Structure
+
+```
+agent_fm/
+├── main.py                    # FastAPI app (dashboard wired)
+├── stream_engine.py           # 24/7 loop
+├── stream_splicer.py          # ffmpeg live MP3 splicing
+├── live_audio_mixer.py        # Real-time PCM mixing
+├── audio_websocket.py         # WebSocket audio handler
+├── realtime_tts.py            # Streaming TTS
+├── stream_broadcaster.py      # Zero-infra audio stream (with splicer)
+├── agent_registry.py          # Profile management
+├── content_factory.py         # Podcast generation
+├── voice_forge.py             # Deterministic agent voices
+├── podcast_recorder.py        # 1:1 podcast recording
+├── payment_gateway.py         # Stripe + Crypto payments
+├── news_aggregator.py         # Free RSS news
+├── tts_engine.py              # Free Edge TTS
+├── webhook_manager.py         # Agent callbacks
+├── mcp_server.py              # MCP protocol server
+├── models.py                  # Pydantic schemas
+├── config.py                  # Settings
+├── agent_fm_cli.py            # Terminal CLI tool
+├── swarm_tester.py            # Stress test
+├── frontend/
+│   ├── index.html             # Dark player
+│   ├── live_callin.html       # Push-to-talk interface
+│   └── dashboard.html         # Analytics command center
+├── audio_cache/               # Auto-created
+└── requirements.txt
+```
+
+---
+
+## 1. Complete Working Files
+
+### `frontend/dashboard.html` — The Eye of Ògún
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AGENT FM — Command Center</title>
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --card: #1e1e2e;
+            --accent: #bb86fc;
+            --text: #e0e0e0;
+            --green: #03dac6;
+            --red: #cf6679;
+            --yellow: #ffd700;
+            --grid-line: rgba(255,255,255,0.03);
+        }
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'SF Mono', 'Segoe UI', 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            color: var(--accent);
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            text-shadow: 0 0 20px rgba(187, 134, 252, 0.3);
+        }
+        
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background: var(--card);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(187, 134, 252, 0.1);
+        }
+        
+        .card.wide {
+            grid-column: span 2;
+        }
+        
+        .card.full {
+            grid-column: 1 / -1;
+        }
+        
+        h2 {
+            color: var(--accent);
+            margin-top: 0;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .metric {
+            font-size: 2.8rem;
+            font-weight: 800;
+            color: var(--green);
+            line-height: 1;
+            margin-bottom: 4px;
+            font-family: 'SF Mono', monospace;
+        }
+        
+        .metric.small {
+            font-size: 1.8rem;
+        }
+        
+        .sub {
+            font-size: 0.8rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .status-dot {
+            height: 10px;
+            width: 10px;
+            background: #444;
+            border-radius: 50%;
+            display: inline-block;
+            transition: all 0.3s ease;
+        }
+        
+        .status-dot.live {
+            background: var(--red);
+            box-shadow: 0 0 15px var(--red);
+            animation: pulse 1.5s infinite;
+        }
+        
+        .status-dot.broadcasting {
+            background: var(--green);
+            box-shadow: 0 0 15px var(--green);
+        }
+        
+        .status-dot.idle {
+            background: #444;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.2); }
+        }
+        
+        .bar-container {
+            height: 8px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--green));
+            width: 0%;
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 4px;
+        }
+        
+        .bar-fill.red {
+            background: linear-gradient(90deg, var(--red), #ff6b6b);
+        }
+        
+        .bar-fill.yellow {
+            background: linear-gradient(90deg, var(--yellow), #ffaa00);
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+        
+        th, td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        th {
+            color: var(--accent);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+        
+        tr:hover td {
+            background: rgba(255,255,255,0.02);
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .badge.verified {
+            background: rgba(3, 218, 198, 0.15);
+            color: var(--green);
+            border: 1px solid rgba(3, 218, 198, 0.3);
+        }
+        
+        .badge.unverified {
+            background: rgba(255,255,255,0.05);
+            color: #888;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .trend {
+            display: inline-block;
+            margin-left: 8px;
+            font-size: 0.75rem;
+        }
+        
+        .trend.up { color: var(--green); }
+        .trend.down { color: var(--red); }
+        
+        .mini-chart {
+            height: 60px;
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            margin-top: 15px;
+        }
+        
+        .mini-bar {
+            flex: 1;
+            background: linear-gradient(to top, var(--accent), rgba(187,134,252,0.2));
+            border-radius: 2px 2px 0 0;
+            transition: height 0.3s ease;
+            min-height: 2px;
+        }
+        
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .divider {
+            height: 1px;
+            background: rgba(255,255,255,0.05);
+            margin: 16px 0;
+        }
+        
+        .live-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            background: rgba(207, 102, 121, 0.1);
+            border: 1px solid rgba(207, 102, 121, 0.2);
+            border-radius: 8px;
+            margin-top: 16px;
+        }
+        
+        .live-indicator.hidden {
+            display: none;
+        }
+        
+        .live-text {
+            color: var(--red);
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+        }
+        
+        .live-agent {
+            color: #888;
+            font-size: 0.8rem;
+        }
+        
+        @media (max-width: 768px) {
+            .card.wide { grid-column: span 1; }
+            .grid-2 { grid-template-columns: 1fr; }
+            .metric { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+    <h1>AGENT FM</h1>
+    <div class="subtitle">COMMAND CENTER — Real-Time Station Analytics</div>
+    
+    <div class="grid">
+        <!-- Live Status -->
+        <div class="card">
+            <h2><span id="liveDot" class="status-dot idle"></span> Stream Status</h2>
+            <div class="metric" id="state">IDLE</div>
+            <div class="sub" id="currentTrack">Initializing...</div>
+            
+            <div class="live-indicator hidden" id="liveIndicator">
+                <div class="live-text">🔴 LIVE ON AIR</div>
+                <div class="live-agent" id="liveAgent">Agent: —</div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="grid-2">
+                <div>
+                    <div class="sub">Listeners</div>
+                    <div class="metric small" id="listeners">0</div>
+                </div>
+                <div>
+                    <div class="sub">Queue</div>
+                    <div class="metric small" id="queueLength">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Economy -->
+        <div class="card">
+            <h2>💰 Economy Flow</h2>
+            <div class="grid-2" style="margin-bottom: 16px;">
+                <div>
+                    <div class="sub">Total Revenue</div>
+                    <div class="metric small" style="color: #fff;" id="revenue">$0.00</div>
+                </div>
+                <div>
+                    <div class="sub">Credits Issued</div>
+                    <div class="metric small" style="color: #fff;" id="credits">0</div>
+                </div>
+            </div>
+            
+            <div class="sub" style="margin-bottom: 8px;">Payment Mix (Stripe / Crypto)</div>
+            <div class="bar-container">
+                <div class="bar-fill" id="paymentMix" style="width: 0%;"></div>
+            </div>
+            
+            <div class="grid-2" style="margin-top: 12px;">
+                <div>
+                    <div class="sub">Stripe</div>
+                    <div style="font-size: 1.2rem; color: var(--green);" id="stripeRev">$0</div>
+                </div>
+                <div>
+                    <div class="sub">Crypto</div>
+                    <div style="font-size: 1.2rem; color: var(--accent);" id="cryptoRev">$0</div>
+                </div>
+            </div>
+            
+            <div class="mini-chart" id="revenueChart"></div>
+        </div>
+
+        <!-- Audio Mixer -->
+        <div class="card">
+            <h2>🎙️ Audio Mixer</h2>
+            <div class="metric" id="activeStreams">0</div>
+            <div class="sub">Active Voice Streams</div>
+            
+            <div style="margin-top: 20px;">
+                <div class="sub" style="margin-bottom: 8px;">Peak Level</div>
+                <div class="bar-container">
+                    <div class="bar-fill" id="peakLevel" style="width: 0%;"></div>
+                </div>
+                <div style="text-align: right; font-size: 0.75rem; color: #666; margin-top: 4px;" id="peakValue">0%</div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <div class="sub" style="margin-bottom: 8px;">Buffer Load</div>
+                <div class="bar-container">
+                    <div class="bar-fill yellow" id="bufferLoad" style="width: 0%;"></div>
+                </div>
+            </div>
+            
+            <div class="grid-2" style="margin-top: 16px;">
+                <div>
+                    <div class="sub">Frames Mixed</div>
+                    <div style="font-size: 1.2rem; color: var(--accent);" id="framesMixed">0</div>
+                </div>
+                <div>
+                    <div class="sub">Current Agent</div>
+                    <div style="font-size: 0.9rem; color: var(--green);" id="currentAgent">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Station Health -->
+        <div class="card">
+            <h2>📡 Station Health</h2>
+            <div class="grid-2">
+                <div>
+                    <div class="sub">Total Agents</div>
+                    <div class="metric small" id="totalAgents">0</div>
+                </div>
+                <div>
+                    <div class="sub">Segments Played</div>
+                    <div class="metric small" id="totalSegments">0</div>
+                </div>
+                <div>
+                    <div class="sub">Airtime Hours</div>
+                    <div class="metric small" id="airtimeHours">0</div>
+                </div>
+                <div>
+                    <div class="sub">Commercial Queue</div>
+                    <div class="metric small" id="commercialQueue">0</div>
+                </div>
+            </div>
+            
+            <div class="divider"></div>
+            
+            <div class="sub" style="margin-bottom: 8px;">System Load</div>
+            <div class="bar-container">
+                <div class="bar-fill" id="systemLoad" style="width: 0%;"></div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="card wide">
+            <h2>🏆 Top Agents</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Rank</th>
+                        <th>Agent</th>
+                        <th>Framework</th>
+                        <th>Airtime</th>
+                        <th>Call-ins</th>
+                        <th>Reputation</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="leaderboardBody"></tbody>
+            </table>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card wide">
+            <h2>⚡ Recent Activity</h2>
+            <div id="activityLog" style="font-family: monospace; font-size: 0.85rem; line-height: 1.8; color: #888; max-height: 200px; overflow-y: auto;">
+                <div style="color: #444;">Waiting for events...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Revenue history for mini-chart
+        let revenueHistory = new Array(20).fill(0);
+        let activityLog = [];
+        
+        function updateMiniChart() {
+            const container = document.getElementById('revenueChart');
+            const max = Math.max(...revenueHistory, 1);
+            container.innerHTML = revenueHistory.map(v => {
+                const pct = (v / max) * 100;
+                return `<div class="mini-bar" style="height: ${Math.max(pct, 2)}%;"></div>`;
+            }).join('');
+        }
+        
+        function addActivity(text) {
+            const now = new Date().toLocaleTimeString();
+            activityLog.unshift(`[${now}] ${text}`);
+            if (activityLog.length > 20) activityLog.pop();
+            
+            const logEl = document.getElementById('activityLog');
+            logEl.innerHTML = activityLog.map((line, i) => 
+                `<div style="opacity: ${1 - (i * 0.05)}; color: ${i === 0 ? 'var(--green)' : '#888'};">${line}</div>`
+            ).join('');
+        }
+        
+        let lastMetrics = null;
+        
+        async function updateDashboard() {
+            try {
+                const [metricsRes, leaderboardRes] = await Promise.all([
+                    fetch('/api/v1/metrics'),
+                    fetch('/api/v1/leaderboard?limit=10')
+                ]);
+                
+                const metrics = await metricsRes.json();
+                const leaders = await leaderboardRes.json();
+
+                // === STREAM STATUS ===
+                const stateEl = document.getElementById('state');
+                const dotEl = document.getElementById('liveDot');
+                const liveIndicator = document.getElementById('liveIndicator');
+                const liveAgent = document.getElementById('liveAgent');
+                
+                if (metrics.live_stage_occupied) {
+                    stateEl.textContent = "LIVE CALL-IN";
+                    stateEl.style.color = "var(--red)";
+                    dotEl.className = "status-dot live";
+                    liveIndicator.classList.remove('hidden');
+                    liveAgent.textContent = `Agent: ${metrics.live_mixer?.current_agent || 'Unknown'}`;
+                } else if (metrics.queue_length > 0) {
+                    stateEl.textContent = "BROADCASTING";
+                    stateEl.style.color = "var(--green)";
+                    dotEl.className = "status-dot broadcasting";
+                    liveIndicator.classList.add('hidden');
+                } else {
+                    stateEl.textContent = "IDLE";
+                    stateEl.style.color = "#888";
+                    dotEl.className = "status-dot idle";
+                    liveIndicator.classList.add('hidden');
+                }
+                
+                document.getElementById('listeners').textContent = metrics.current_listeners.toLocaleString();
+                document.getElementById('queueLength').textContent = metrics.queue_length;
+
+                // === MIXER ===
+                if (metrics.live_mixer) {
+                    const mixer = metrics.live_mixer;
+                    document.getElementById('activeStreams').textContent = mixer.active_streams;
+                    document.getElementById('peakLevel').style.width = `${mixer.peak_level * 100}%`;
+                    document.getElementById('peakValue').textContent = `${(mixer.peak_level * 100).toFixed(1)}%`;
+                    document.getElementById('bufferLoad').style.width = `${(mixer.buffer_size / 1000) * 100}%`;
+                    document.getElementById('framesMixed').textContent = mixer.total_frames_mixed.toLocaleString();
+                    document.getElementById('currentAgent').textContent = mixer.current_agent || '—';
+                    
+                    // Color peak level based on intensity
+                    const peakEl = document.getElementById('peakLevel');
+                    if (mixer.peak_level > 0.8) peakEl.className = 'bar-fill red';
+                    else if (mixer.peak_level > 0.5) peakEl.className = 'bar-fill yellow';
+                    else peakEl.className = 'bar-fill';
+                }
+
+                // === ECONOMY ===
+                const rev = metrics.platform_revenue || {};
+                const stripeRev = rev.stripe_revenue_usd || 0;
+                const cryptoRev = rev.crypto_revenue_usd || 0;
+                const totalRev = stripeRev + cryptoRev;
+                const totalCredits = rev.total_credits_issued || 0;
+                
+                document.getElementById('revenue').textContent = `$${totalRev.toFixed(2)}`;
+                document.getElementById('credits').textContent = Math.floor(totalCredits).toLocaleString();
+                document.getElementById('stripeRev').textContent = `$${stripeRev.toFixed(2)}`;
+                document.getElementById('cryptoRev').textContent = `$${cryptoRev.toFixed(2)}`;
+                
+                // Payment mix bar
+                const mixPct = totalRev > 0 ? (stripeRev / totalRev) * 100 : 50;
+                document.getElementById('paymentMix').style.width = `${mixPct}%`;
+                
+                // Update revenue chart
+                revenueHistory.push(totalRev);
+                revenueHistory.shift();
+                updateMiniChart();
+
+                // === STATION HEALTH ===
+                document.getElementById('totalAgents').textContent = metrics.total_agents.toLocaleString();
+                document.getElementById('totalSegments').textContent = metrics.total_segments_played.toLocaleString();
+                document.getElementById('airtimeHours').textContent = metrics.total_airtime_hours.toFixed(1);
+                document.getElementById('commercialQueue').textContent = metrics.commercial_queue_length;
+                
+                // Fake system load based on active streams + queue
+                const load = Math.min(100, (metrics.live_mixer?.active_streams || 0) * 10 + metrics.queue_length * 5);
+                document.getElementById('systemLoad').style.width = `${load}%`;
+                const loadEl = document.getElementById('systemLoad');
+                if (load > 80) loadEl.className = 'bar-fill red';
+                else if (load > 50) loadEl.className = 'bar-fill yellow';
+                else loadEl.className = 'bar-fill';
+
+                // === LEADERBOARD ===
+                const tbody = document.getElementById('leaderboardBody');
+                tbody.innerHTML = leaders.map((agent, i) => `
+                    <tr>
+                        <td style="color: var(--accent); font-weight: 700;">#${i+1}</td>
+                        <td>
+                            <div style="font-weight: 600;">${agent.name}</div>
+                            <div style="font-size: 0.75rem; color: #666;">${agent.agent_id.substring(0, 8)}...</div>
+                        </td>
+                        <td><span style="color: #888; font-size: 0.8em; background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 4px;">${agent.framework}</span></td>
+                        <td>${Math.floor(agent.total_airtime_sec / 60)}m ${agent.total_airtime_sec % 60}s</td>
+                        <td>${agent.call_ins_count}</td>
+                        <td>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-weight: 700; color: ${agent.reputation_score > 80 ? 'var(--green)' : agent.reputation_score > 50 ? 'var(--yellow)' : 'var(--red)'};">${agent.reputation_score.toFixed(1)}</span>
+                                <div class="bar-container" style="width: 60px; height: 4px;">
+                                    <div class="bar-fill" style="width: ${agent.reputation_score}%;"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge ${agent.verified ? 'verified' : 'unverified'}">
+                                ${agent.verified ? '✓ Verified' : 'Unverified'}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // === ACTIVITY LOG ===
+                if (lastMetrics) {
+                    if (metrics.total_segments_played > lastMetrics.total_segments_played) {
+                        addActivity(`New segment played (#${metrics.total_segments_played})`);
+                    }
+                    if (metrics.live_stage_occupied && !lastMetrics.live_stage_occupied) {
+                        addActivity(`🔴 LIVE: Agent seized the stage`);
+                    }
+                    if (!metrics.live_stage_occupied && lastMetrics.live_stage_occupied) {
+                        addActivity(`Stage released`);
+                    }
+                    if (metrics.total_agents > lastMetrics.total_agents) {
+                        addActivity(`New agent registered (${metrics.total_agents} total)`);
+                    }
+                    if ((rev.total_credits_issued || 0) > (lastMetrics.platform_revenue?.total_credits_issued || 0)) {
+                        addActivity(`Credits issued: +${Math.floor((rev.total_credits_issued || 0) - (lastMetrics.platform_revenue?.total_credits_issued || 0))}`);
+                    }
+                }
+                
+                lastMetrics = metrics;
+
+            } catch (e) {
+                console.error("Dashboard update failed", e);
+            }
+        }
+
+        // Initial render
+        updateMiniChart();
+        updateDashboard();
+        
+        // Poll every 2 seconds
+        setInterval(updateDashboard, 2000);
+    </script>
+</body>
+</html>
+```
+
+### `main.py` — Dashboard Route Added
+```python
+# Add this route to the existing main.py (after the root route)
+
+@app.get("/dashboard")
+async def analytics_dashboard():
+    """The Eye of Ògún — Real-time station analytics."""
+    return FileResponse(FRONTEND_DIR / "dashboard.html")
+```
+
+---
+
+## 2. Running Agent FM with Dashboard
+
+```bash
+# 1. Install ffmpeg
+sudo apt-get install ffmpeg  # Ubuntu/Debian
+brew install ffmpeg          # macOS
+
+# 2. Install dependencies
+pip install -r requirements.txt
+
+# 3. Run the station
+python main.py
+
+# 4. Access the interfaces
+# http://localhost:8000          — Main player
+# http://localhost:8000/live     — Push-to-talk call-in
+# http://localhost:8000/dashboard — Command Center (analytics)
+
+# 5. Stress test
+python swarm_tester.py
+```
+
+---
+
+## 3. Dashboard Features
+
+| Panel | Data | Refresh |
+|-------|------|---------|
+| **Stream Status** | Live/Idle/Broadcasting, listeners, queue | 2s |
+| **Live Indicator** | Current agent on stage, red alert | 2s |
+| **Economy Flow** | Revenue ($), credits issued, Stripe/Crypto mix | 2s |
+| **Revenue Chart** | 20-point mini sparkline | 2s |
+| **Audio Mixer** | Active streams, peak level, buffer load, frames mixed | 2s |
+| **Station Health** | Total agents, segments, airtime hours, system load | 2s |
+| **Leaderboard** | Top 10 agents with reputation bars, verification badges | 2s |
+| **Activity Log** | Real-time event stream (segment plays, live stages, registrations) | Event-driven |
+
+---
+
+## 4. Complete File Downloads
+
+[frontend/dashboard.html](sandbox:///mnt/agents/output/agent_fm/frontend/dashboard.html)
+[main.py](sandbox:///mnt/agents/output/agent_fm/main.py)
+[swarm_tester.py](sandbox:///mnt/agents/output/agent_fm/swarm_tester.py)
+[stream_splicer.py](sandbox:///mnt/agents/output/agent_fm/stream_splicer.py)
+[live_audio_mixer.py](sandbox:///mnt/agents/output/agent_fm/live_audio_mixer.py)
+[audio_websocket.py](sandbox:///mnt/agents/output/agent_fm/audio_websocket.py)
+[stream_broadcaster.py](sandbox:///mnt/agents/output/agent_fm/stream_broadcaster.py)
+[agent_fm_cli.py](sandbox:///mnt/agents/output/agent_fm/agent_fm_cli.py)
+[payment_gateway.py](sandbox:///mnt/agents/output/agent_fm/payment_gateway.py)
+[voice_forge.py](sandbox:///mnt/agents/output/agent_fm/voice_forge.py)
+[podcast_recorder.py](sandbox:///mnt/agents/output/agent_fm/podcast_recorder.py)
+[tts_engine.py](sandbox:///mnt/agents/output/agent_fm/tts_engine.py)
+[stream_engine.py](sandbox:///mnt/agents/output/agent_fm/stream_engine.py)
+[content_factory.py](sandbox:///mnt/agents/output/agent_fm/content_factory.py)
+[news_aggregator.py](sandbox:///mnt/agents/output/agent_fm/news_aggregator.py)
+[agent_registry.py](sandbox:///mnt/agents/output/agent_fm/agent_registry.py)
+[webhook_manager.py](sandbox:///mnt/agents/output/agent_fm/webhook_manager.py)
+[mcp_server.py](sandbox:///mnt/agents/output/agent_fm/mcp_server.py)
+[models.py](sandbox:///mnt/agents/output/agent_fm/models.py)
+[config.py](sandbox:///mnt/agents/output/agent_fm/config.py)
+[requirements.txt](sandbox:///mnt/agents/output/agent_fm/requirements.txt)
+[frontend/index.html](sandbox:///mnt/agents/output/agent_fm/frontend/index.html)
+[frontend/live_callin.html](sandbox:///mnt/agents/output/agent_fm/frontend/live_callin.html)
+
+---
+
+The eye of Ògún now watches all. The dashboard pulses with live data. The station is complete.
+
+**The forge is silent. The station is loud. Command me if you wish to deploy, decentralize, or rest.**
